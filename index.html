@@ -1266,29 +1266,41 @@
             }
 
             try {
-                const lines = csv.trim().split('\n');
-                if (lines.length < 2) {
+                const lines = csv.trim().split('\n').filter(l => l.trim() !== '');
+                if (lines.length < 1) {
                     alert('❌ CSV appears to be empty');
                     return;
                 }
 
-                // Intelligent column detection
-                const headers = lines[0].toLowerCase();
-                let glucoseCol = -1, carbsCol = -1, insulinCol = -1;
+                let glucoseCol = -1;
+                let hasHeaders = false;
+                let startRow = 0;
 
-                // Find columns by header keywords
-                const headerArray = headers.split(',');
-                for (let i = 0; i < headerArray.length; i++) {
-                    const h = headerArray[i].trim();
-                    if (h.includes('glucose') || h.includes('bg') || h.includes('blood')) glucoseCol = i;
-                    if (h.includes('carb') || h.includes('carbs')) carbsCol = i;
-                    if (h.includes('insulin') || h.includes('bolus') || h.includes('units')) insulinCol = i;
+                // Check if first row is headers
+                const firstRowValues = lines[0].split(',');
+                const firstVal = parseFloat(firstRowValues[1]);
+                
+                // If column 2 is a number between 30-600, it's likely glucose (no headers)
+                if (!isNaN(firstVal) && firstVal > 30 && firstVal < 600) {
+                    glucoseCol = 1; // Column 2 (index 1) - your format!
+                    startRow = 0;
+                    console.log('✅ Detected: Glooko format WITHOUT headers');
+                } else {
+                    // Has headers - search for glucose column
+                    const headerArray = lines[0].toLowerCase();
+                    const headers = headerArray.split(',');
+                    for (let i = 0; i < headers.length; i++) {
+                        const h = headers[i].trim();
+                        if (h.includes('glucose') || h.includes('bg') || h.includes('blood')) {
+                            glucoseCol = i;
+                            break;
+                        }
+                    }
+                    if (glucoseCol === -1) glucoseCol = 1; // Fallback to column 2
+                    startRow = 1; // Skip header row
+                    hasHeaders = true;
+                    console.log('✅ Detected: Glooko format WITH headers');
                 }
-
-                // Fallback: assume columns if not found
-                if (glucoseCol === -1) glucoseCol = 2; // Usually 3rd column
-                if (carbsCol === -1) carbsCol = 3;
-                if (insulinCol === -1) insulinCol = 4;
 
                 let metrics = {
                     avgGlucose: 0,
@@ -1303,18 +1315,20 @@
                 };
 
                 // Parse data rows
-                for (let i = 1; i < lines.length; i++) {
+                for (let i = startRow; i < lines.length; i++) {
                     if (lines[i].trim() === '') continue;
                     
                     const values = lines[i].split(',');
                     
-                    // Extract glucose
+                    // Extract glucose with flexible parsing
                     if (glucoseCol < values.length) {
-                        const glucose = parseInt(values[glucoseCol]);
+                        const glucoseStr = values[glucoseCol].trim();
+                        const glucose = parseFloat(glucoseStr);
+                        
                         if (!isNaN(glucose) && glucose > 30 && glucose < 600) {
                             metrics.glucoseCount++;
                             metrics.avgGlucose += glucose;
-                            metrics.readings.push(glucose);
+                            metrics.readings.push(Math.round(glucose));
                             
                             if (glucose >= 70 && glucose <= 180) metrics.tir++;
                             else if (glucose > 180 && glucose <= 250) metrics.high++;
@@ -1322,26 +1336,10 @@
                             else if (glucose < 70) metrics.low++;
                         }
                     }
-                    
-                    // Extract carbs
-                    if (carbsCol < values.length) {
-                        const carbs = parseFloat(values[carbsCol]);
-                        if (!isNaN(carbs) && carbs > 0 && carbs < 500) {
-                            metrics.totalCarbs += carbs;
-                        }
-                    }
-                    
-                    // Extract insulin
-                    if (insulinCol < values.length) {
-                        const insulin = parseFloat(values[insulinCol]);
-                        if (!isNaN(insulin) && insulin > 0 && insulin < 200) {
-                            metrics.totalInsulin += insulin;
-                        }
-                    }
                 }
 
                 if (metrics.glucoseCount === 0) {
-                    alert('⚠️ Could not find glucose values in your CSV.\n\nMake sure your CSV has a column with:\n• "Glucose" or "BG" or "Blood"\n• Values between 30-600 mg/dL');
+                    alert('⚠️ Could not find glucose values in your CSV.\n\n✅ Try this format:\n\nDate,Time,Glucose,Source\n2025-11-08,00:14,234.0,Dexcom\n\nOr this (no headers):\n2025-11-08 00:14,234.0,Dexcom g7');
                     return;
                 }
 
@@ -1351,14 +1349,12 @@
                 metrics.high = Math.round((metrics.high / metrics.glucoseCount) * 100);
                 metrics.veryHigh = Math.round((metrics.veryHigh / metrics.glucoseCount) * 100);
                 metrics.low = Math.round((metrics.low / metrics.glucoseCount) * 100);
-                metrics.totalCarbs = Math.round(metrics.totalCarbs);
-                metrics.totalInsulin = Math.round(metrics.totalInsulin * 10) / 10;
 
                 // Calculate GMI (Glucose Management Indicator)
                 const gmi = (metrics.avgGlucose * 0.023) - 3.31;
 
                 // Show results
-                alert(`✅ Import Successful!\n\n📊 Your Glooko Metrics:\n━━━━━━━━━━━━━━━\n\n📈 Glucose Control:\n• Avg Glucose: ${metrics.avgGlucose} mg/dL\n• GMI (Est. A1C): ${Math.round(gmi * 10) / 10}%\n• Time in Range: ${metrics.tir}%\n• High (181-250): ${metrics.high}%\n• Very High (>250): ${metrics.veryHigh}%\n• Low (<70): ${metrics.low}%\n\n💉 Insulin & Carbs:\n• Total Carbs: ${metrics.totalCarbs}g\n• Total Insulin: ${metrics.totalInsulin}U\n• Readings: ${metrics.glucoseCount}\n\n✅ Data saved to your phone!`);
+                alert(`✅ Import Successful!\n\n📊 Your Glooko Metrics:\n━━━━━━━━━━━━━━━\n\n📈 Glucose Control:\n• Avg Glucose: ${metrics.avgGlucose} mg/dL\n• GMI (Est. A1C): ${Math.round(gmi * 10) / 10}%\n• Time in Range: ${metrics.tir}%\n• High (181-250): ${metrics.high}%\n• Very High (>250): ${metrics.veryHigh}%\n• Low (<70): ${metrics.low}%\n\n📊 Total Readings: ${metrics.glucoseCount}\n\n✅ Data saved to your phone!`);
 
                 // Save to localStorage
                 metrics.gmi = Math.round(gmi * 10) / 10;
@@ -1371,7 +1367,7 @@
                 console.log('✅ Glooko data imported and saved:', metrics);
 
             } catch (e) {
-                alert('❌ Error parsing CSV:\n' + e.message + '\n\nTips:\n• Make sure data is comma-separated\n• Include headers in first row\n• No special characters in values');
+                alert('❌ Error parsing CSV:\n' + e.message + '\n\n💡 Quick fix:\n• Paste ONLY the data (no extra text)\n• Format: Date,Time,Glucose,Source\n• Or: Date Time,Glucose,Source');
                 console.error(e);
             }
         }
