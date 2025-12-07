@@ -1,0 +1,62 @@
+{
+  "name": "RAYA – T1D Endocrine Copilot",
+  "short_name": "RAYA",
+  "description": "Type 1 Diabetes Management Dashboard – Omnipod 5 + Dexcom G7 with Glooko Integration",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#208080",
+  "background_color": "#ffffff",
+  "categories": ["health", "medical"],
+  "screenshots": [
+    {
+      "src": "https://user-gen-media-assets.s3.amazonaws.com/seedream_images/18760580-8fa6-4a44-94e3-58d6a9f9b269.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "icons": [
+    {
+      "src": "https://user-gen-media-assets.s3.amazonaws.com/seedream_images/18760580-8fa6-4a44-94e3-58d6a9f9b269.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://user-gen-media-assets.s3.amazonaws.com/seedream_images/18760580-8fa6-4a44-94e3-58d6a9f9b269.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log Entry",
+      "short_name": "Log",
+      "description": "Quick log meal, BG, or activity",
+      "url": "/?tab=logging",
+      "icons": [
+        {
+          "src": "https://user-gen-media-assets.s3.amazonaws.com/seedream_images/18760580-8fa6-4a44-94e3-58d6a9f9b269.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "View Patterns",
+      "short_name": "Patterns",
+      "description": "See your glucose patterns",
+      "url": "/?tab=patterns",
+      "icons": [
+        {
+          "src": "https://user-gen-media-assets.s3.amazonaws.com/seedream_images/18760580-8fa6-4a44-94e3-58d6a9f9b269.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

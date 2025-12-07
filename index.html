@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RAYA">
+    <meta name="apple-mobile-web-app-icon" content="https://user-gen-media-assets.s3.amazonaws.com/seedream_images/18760580-8fa6-4a44-94e3-58d6a9f9b269.png">
+    <meta name="theme-color" content="#208080">
+    <meta name="description" content="RAYA - Type 1 Diabetes Endocrine Copilot. Omnipod 5 + Dexcom G7 management dashboard.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="https://user-gen-media-assets.s3.amazonaws.com/seedream_images/18760580-8fa6-4a44-94e3-58d6a9f9b269.png">
+    <title>RAYA – T1D Copilot Dashboard</title>
+    <style>
+        :root {
+            --color-primary: #208080;
+            --color-primary-hover: #1a6b6b;
+            --color-primary-active: #1a5f5f;
+            --color-bg: #f5f5f5;
+            --color-surface: #ffffff;
+            --color-text: #1f2121;
+            --color-text-secondary: #626c7c;
+            --color-border: #e0e0e0;
+            --color-success: #22c55e;
+            --color-warning: #f59e0b;
+            --color-error: #c0152f;
+            --color-info: #3b82f6;
+            --color-target: #10b981;
+            --color-high: #ef4444;
+            --color-low: #8b5cf6;
+            --space-8: 8px;
+            --space-16: 16px;
+            --space-24: 24px;
+            --space-32: 32px;
+            --radius-base: 8px;
+            --radius-md: 10px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-16);
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #1a7f7f 100%);
+            color: white;
+            padding: var(--space-24);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-24);
+            box-shadow: var(--shadow-md);
+        }
+
+        header h1 {
+            margin: 0 0 var(--space-8) 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .sync-status {
+            position: fixed;
+            bottom: var(--space-16);
+            right: var(--space-16);
+            background: var(--color-success);
+            color: white;
+            padding: var(--space-12) var(--space-16);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            display: none;
+            z-index: 1000;
+        }
+
+        .sync-status.show {
+            display: block;
+        }
+
+        .sync-status.offline {
+            background: var(--color-warning);
+        }
+
+        .tabs {
+            display: flex;
+            gap: var(--space-8);
+            margin-bottom: var(--space-24);
+            border-bottom: 2px solid var(--color-border);
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            padding: var(--space-16) var(--space-24);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            color: var(--color-primary);
+        }
+
+        .tab-button.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-16);
+            margin-bottom: var(--space-24);
+        }
+
+        .card {
+            background: var(--color-surface);
+            border-radius: var(--radius-base);
+            padding: var(--space-24);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .card h3 {
+            margin: 0 0 var(--space-8) 0;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-text-secondary);
+        }
+
+        .card .value {
+            font-size: 32px;
+            font-weight: 700;
+            margin: var(--space-8) 0;
+            color: var(--color-text);
+        }
+
+        .card .unit {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+
+        .card.status-good .value {
+            color: var(--color-success);
+        }
+
+        .card.status-warning .value {
+            color: var(--color-warning);
+        }
+
+        .card.status-alert .value {
+            color: var(--color-error);
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-8) 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+
+        .metric-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .progress-bar {
+            background: var(--color-border);
+            border-radius: 999px;
+            height: 8px;
+            margin-top: var(--space-8);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--color-success);
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-fill.warning {
+            background: var(--color-warning);
+        }
+
+        .progress-fill.alert {
+            background: var(--color-error);
+        }
+
+        .form-group {
+            margin-bottom: var(--space-16);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--space-8);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: var(--space-12);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--color-text);
+            background: var(--color-surface);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(32, 128, 128, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-16);
+        }
+
+        .btn {
+            padding: var(--space-12) var(--space-24);
+            border: none;
+            border-radius: var(--radius-base);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-hover);
+        }
+
+        .btn-secondary {
+            background: var(--color-border);
+            color: var(--color-text);
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: var(--space-8);
+            margin-top: var(--space-16);
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: var(--space-32);
+        }
+
+        .timeline-item {
+            margin-bottom: var(--space-24);
+            position: relative;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: calc(var(--space-32) * -1 + 6px);
+            top: 0;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            border: 2px solid var(--color-surface);
+        }
+
+        .timeline-time {
+            font-size: 12px;
+            color: var(--color-text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .timeline-content {
+            margin-top: var(--space-8);
+            font-size: 14px;
+        }
+
+        .pattern-box {
+            background: var(--color-bg);
+            border-left: 4px solid var(--color-primary);
+            padding: var(--space-16);
+            border-radius: var(--radius-base);
+            margin-bottom: var(--space-16);
+        }
+
+        .pattern-box.high {
+            border-left-color: var(--color-high);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .pattern-box.low {
+            border-left-color: var(--color-low);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .alert-box {
+            background: rgba(192, 21, 47, 0.1);
+            border: 1px solid rgba(192, 21, 47, 0.3);
+            border-radius: var(--radius-base);
+            padding: var(--space-16);
+            margin-bottom: var(--space-16);
+        }
+
+        .alert-box.warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+
+        .alert-box.info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .alert-box h4 {
+            margin: 0 0 var(--space-8) 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .alert-box p {
+            margin: 0;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+        }
+
+        .chart-placeholder {
+            background: var(--color-bg);
+            border: 2px dashed var(--color-border);
+            border-radius: var(--radius-base);
+            padding: var(--space-32);
+            text-align: center;
+            color: var(--color-text-secondary);
+            font-size: 14px;
+            margin-bottom: var(--space-16);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: var(--space-4) var(--space-12);
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--color-border);
+            color: var(--color-text);
+        }
+
+        .badge.success {
+            background: rgba(34, 197, 94, 0.1);
+            color: var(--color-success);
+        }
+
+        .badge.warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--color-warning);
+        }
+
+        .badge.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--color-error);
+        }
+
+        .action-items {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            padding: var(--space-24);
+            margin-bottom: var(--space-24);
+        }
+
+        .action-items h3 {
+            margin: 0 0 var(--space-16) 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .action-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .action-list li {
+            padding: var(--space-12) 0;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-12);
+        }
+
+        .action-list li:last-child {
+            border-bottom: none;
+        }
+
+        .action-list input[type="checkbox"] {
+            margin-top: 4px;
+            cursor: pointer;
+            accent-color: var(--color-primary);
+        }
+
+        .action-list label {
+            cursor: pointer;
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .week-summary {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: var(--space-8);
+            margin-bottom: var(--space-16);
+        }
+
+        .day-box {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-base);
+            padding: var(--space-12);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .day-box:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .day-box.selected {
+            border-color: var(--color-primary);
+            background: rgba(32, 128, 128, 0.05);
+        }
+
+        .day-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--color-text-secondary);
+            margin-bottom: var(--space-8);
+        }
+
+        .day-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-text);
+        }
+
+        .day-status {
+            font-size: 11px;
+            color: var(--color-text-secondary);
+            margin-top: var(--space-4);
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 22px;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .week-summary {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 RAYA – Your T1D Endocrine Copilot</h1>
+            <p>Type 1 Diabetes Management Dashboard | Omnipod 5 + Dexcom G7 | 3-Month Goal Tracker</p>
+        </header>
+
+        <div class="sync-status" id="syncStatus">
+            ✅ Online - All data synced
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab-button" onclick="switchTab('logging')">Log Entry</button>
+            <button class="tab-button" onclick="switchTab('patterns')">Patterns</button>
+            <button class="tab-button" onclick="switchTab('goals')">Goals & Progress</button>
+            <button class="tab-button" onclick="switchTab('endo-prep')">Endo Prep</button>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="tab-content active">
+            <div class="alert-box warning">
+                <h4>⚠️ Key Finding from Your Recent Data (Nov 24 - Dec 7)</h4>
+                <p><strong>Your actual daily insulin is ~75 U/day (not 45 U as estimated), and you're eating ~182g carbs/day (not 120g).</strong> This explains your higher insulin resistance (0.75 U/kg). Your 9 AM coffee with milk has ~12g carbs—if you're not bolusing for this, it's contributing to post-breakfast spikes. Your nocturnal lows at 12:30 AM and 3 AM suggest evening corrections may be stacking or your 9 PM–12 AM basal is too aggressive.</p>
+            </div>
+
+            <div class="grid">
+                <div class="card status-alert">
+                    <h3>Current A1C (GMI)</h3>
+                    <div class="value">7.2%</div>
+                    <div class="unit">Target: ≤6.5%</div>
+                    <div class="progress-bar"><div class="progress-fill alert" style="width: 65%;"></div></div>
+                </div>
+
+                <div class="card status-warning">
+                    <h3>Time in Range</h3>
+                    <div class="value">66%</div>
+                    <div class="unit">Target: >85%</div>
+                    <div class="progress-bar"><div class="progress-fill warning" style="width: 66%;"></div></div>
+                </div>
+
+                <div class="card">
+                    <h3>Daily Insulin</h3>
+                    <div class="value">75 U</div>
+                    <div class="unit">Basal: 35.8U | Bolus: 39.1U</div>
+                </div>
+
+                <div class="card">
+                    <h3>Daily Steps</h3>
+                    <div class="value">4,652</div>
+                    <div class="unit">Target: 10,000</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: 46.5%;"></div></div>
+                </div>
+
+                <div class="card status-warning">
+                    <h3>Avg Glucose</h3>
+                    <div class="value">164</div>
+                    <div class="unit">mg/dL (Target: <150)</div>
+                </div>
+
+                <div class="card">
+                    <h3>Weight</h3>
+                    <div class="value">201</div>
+                    <div class="unit">lbs (Goal: 196–197)</div>
+                </div>
+            </div>
+
+            <div class="action-items">
+                <h3>🎯 Priority Actions This Week</h3>
+                <ul class="action-list">
+                    <li>
+                        <input type="checkbox" id="action1">
+                        <label for="action1"><strong>Bolus for coffee correctly:</strong> Your 9 AM coffee + 2% milk = ~12g carbs. Start bolusing 1-2 units for this. Pre-bolus 10-15 minutes before drinking.</label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="action2">
+                        <label for="action2"><strong>Track evening corrections:</strong> When you correct a high BG after dinner, note the time, BG, bolus amount, and your IOB (insulin-on-board from Omnipod app). This helps identify stacking.</label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="action3">
+                        <label for="action3"><strong>Weigh your meals for 1 week:</strong> Your Glooko data shows 182g carbs/day—confirm whether you're eating more than you realize or carb-counting inaccurately.</label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="action4">
+                        <label for="action4"><strong>Collect 5 detailed breakfast traces:</strong> Screenshot your Dexcom from 1 hour pre-breakfast through 2 hours post. Include pre-meal BG, meal time, bolus time, and carbs.</label>
+                    </li>
+                    <li>
+                        <input type="checkbox" id="action5">
+                        <label for="action5"><strong>Collect 5 detailed overnight traces:</strong> Capture 6 PM dinner through 8 AM wake-up. Note any corrections and the time/BG of lows.</label>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="pattern-box high">
+                <strong>🔴 Post-Breakfast Highs (9 AM)</strong>
+                <p>Your data shows a median spike to 168 mg/dL at 9 AM, reaching up to 215 mg/dL (90th percentile). Likely causes: (1) Coffee milk carbs not bolused (12g), (2) Breakfast carbs underestimated, (3) Timing of bolus too close to meal time. <strong>Action: Bolus for full coffee carbs + consider 15-min pre-bolus for breakfast.</strong></p>
+            </div>
+
+            <div class="pattern-box low">
+                <strong>🔵 Nocturnal Lows (12:30 AM & 3 AM)</strong>
+                <p>Your data shows glucose dropping to 115 mg/dL (10th percentile) in the 12 AM–3 AM window. Likely causes: (1) Stacked manual + automatic corrections in evening, (2) Evening basal (9 PM–12 AM: 1.1 U/hr) too aggressive, (3) Aggressive ISF (25) in evening. <strong>Action: Stop stacking corrections. Check IOB before correcting. Discuss evening basal reduction with endo.</strong></p>
+            </div>
+        </div>
+
+        <!-- LOGGING TAB -->
+        <div id="logging" class="tab-content">
+            <div class="card">
+                <h3>📋 Daily Entry Logger</h3>
+                <form id="entryForm">
+                    <div class="form-group">
+                        <label>Date & Time</label>
+                        <input type="datetime-local" id="entryTime" value="">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Entry Type</label>
+                        <select id="entryType" onchange="updateEntryFields()">
+                            <option value="meal">Meal</option>
+                            <option value="snack">Snack</option>
+                            <option value="bg-check">BG Check</option>
+                            <option value="activity">Activity</option>
+                            <option value="low">Low Treatment</option>
+                            <option value="sleep">Sleep Log</option>
+                        </select>
+                    </div>
+
+                    <!-- MEAL/SNACK FIELDS -->
+                    <div id="mealFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Carbs (g)</label>
+                                <input type="number" id="carbs" placeholder="e.g., 45">
+                            </div>
+                            <div class="form-group">
+                                <label>Protein (g)</label>
+                                <input type="number" id="protein" placeholder="e.g., 30">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Fat (g)</label>
+                                <input type="number" id="fat" placeholder="e.g., 15">
+                            </div>
+                            <div class="form-group">
+                                <label>Bolus (Units)</label>
+                                <input type="number" id="bolus" placeholder="e.g., 7.5" step="0.1">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Meal Description</label>
+                            <textarea id="mealDesc" placeholder="e.g., Scrambled eggs, toast, avocado" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- BG CHECK FIELDS -->
+                    <div id="bgCheckFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>BG Reading (mg/dL)</label>
+                                <input type="number" id="bgValue" placeholder="e.g., 145">
+                            </div>
+                            <div class="form-group">
+                                <label>Trend Arrow</label>
+                                <select id="trend">
+                                    <option value="">Select...</option>
+                                    <option value="rising-fast">↗↗ Rising Fast</option>
+                                    <option value="rising">↗ Rising</option>
+                                    <option value="stable">→ Stable</option>
+                                    <option value="falling">↘ Falling</option>
+                                    <option value="falling-fast">↘↘ Falling Fast</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Context (if correcting)</label>
+                            <textarea id="bgContext" placeholder="e.g., Post-breakfast spike, treated with 2U correction" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- ACTIVITY FIELDS -->
+                    <div id="activityFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Activity Type</label>
+                                <select id="actType">
+                                    <option value="walk">Walk</option>
+                                    <option value="run">Run</option>
+                                    <option value="strength">Strength Training</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Duration (min)</label>
+                                <input type="number" id="actDuration" placeholder="e.g., 30">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <textarea id="actNotes" placeholder="e.g., Neighborhood walk with family, easy pace" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- LOW TREATMENT FIELDS -->
+                    <div id="lowFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>BG at Low (mg/dL)</label>
+                                <input type="number" id="lowBG" placeholder="e.g., 58">
+                            </div>
+                            <div class="form-group">
+                                <label>Treatment Given (g carbs)</label>
+                                <input type="number" id="lowTreat" placeholder="e.g., 15">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>What you treated with</label>
+                            <input type="text" id="lowWhat" placeholder="e.g., 4 oz juice, 3 glucose tablets">
+                        </div>
+                    </div>
+
+                    <!-- SLEEP FIELDS -->
+                    <div id="sleepFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sleep Duration (hours)</label>
+                                <input type="number" id="sleepHours" placeholder="e.g., 7.5" step="0.5">
+                            </div>
+                            <div class="form-group">
+                                <label>Sleep Quality (1-10)</label>
+                                <input type="number" id="sleepQuality" placeholder="e.g., 8" min="1" max="10">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Awakenings / Notes</label>
+                            <textarea id="sleepNotes" placeholder="e.g., Woke at 2 AM due to low, otherwise solid sleep" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button type="submit" class="btn btn-primary">Log Entry</button>
+                        <button type="reset" class="btn btn-secondary">Clear</button>
+                    </div>
+                </form>
+
+                <h3 style="margin-top: var(--space-32);">Today's Entries</h3>
+                <div id="entriesList"></div>
+            </div>
+        </div>
+
+        <!-- PATTERNS TAB -->
+        <div id="patterns" class="tab-content">
+            <div class="card">
+                <h3>📊 Pattern Analysis (Last 14 Days from Glooko)</h3>
+                <div class="chart-placeholder">
+                    📈 Your Ambulatory Glucose Profile (AGP)<br>
+                    Median BG: 152 mg/dL | Highest: 386 mg/dL | Lowest: <54 mg/dL<br>
+                    <small>Import your Dexcom/Glooko data to see detailed hourly trends</small>
+                </div>
+
+                <h4>Time-in-Range Breakdown</h4>
+                <div class="metric-row">
+                    <span class="metric-label">🟢 Target (70–180)</span>
+                    <span class="metric-value">66% <span class="badge warning">Below Goal</span></span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width: 66%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">🔴 High (181–250)</span>
+                    <span class="metric-value">24%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill warning" style="width: 24%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">🟣 Very High (>250)</span>
+                    <span class="metric-value">9%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill alert" style="width: 9%;"></div></div>
+
+                <div class="metric-row">
+                    <span class="metric-label">🔵 Low (54–69)</span>
+                    <span class="metric-value">1%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width: 1%; background: var(--color-low);"></div></div>
+
+                <h4 style="margin-top: var(--space-24);">Detailed Metrics</h4>
+                <div class="metric-row">
+                    <span class="metric-label">Average Glucose</span>
+                    <span class="metric-value">164 mg/dL</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">GMI (A1C estimate)</span>
+                    <span class="metric-value">7.2%</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Glucose SD</span>
+                    <span class="metric-value">58 mg/dL</span>
+                </div>
+                <div class="metric-row">
+                    <span class="metric-label">Coefficient of Variation</span>
+                    <span class="metric-value">35.4% <span class="badge warning">High Variability</span></span>
+                </div>
+
+                <div class="alert-box">
+                    <h4>💡 What This Means</h4>
+                    <p><strong>66% TIR is below your 85% goal.</strong> You have too much time in the "high" range (181–250, 24%; >250, 9%). Your average glucose of 164 is also higher than target (<150). The high CV of 35.4% means your glucose is erratic—lots of ups and downs, rather than steady. This explains both your post-meal spikes and nocturnal lows.</p>
+                </div>
+
+                <h4 style="margin-top: var(--space-24);">Time-of-Day Patterns</h4>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-time">12 AM – 3 AM (NOCTURNAL)</div>
+                        <div class="timeline-content">
+                            <strong>Median: 138–145 mg/dL</strong> | Range: 98–175 mg/dL<br>
+                            ⚠️ <strong>This is where your lows occur.</strong> Your 10th percentile drops to 98 mg/dL at 3 AM. Likely driven by evening corrections and/or high overnight basal.
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">6 AM – 9 AM (MORNING/BREAKFAST)</div>
+                        <div class="timeline-content">
+                            <strong>Median: 142–168 mg/dL</strong> | Range: 130–215 mg/dL<br>
+                            📈 <strong>This is where your highs spike.</strong> You jump from 142 at 6 AM to 168 at 9 AM (after coffee). Peak range reaches 215 mg/dL. Breakfast bolus timing or coffee carbs likely culprits.
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">12 PM – 3 PM (AFTERNOON)</div>
+                        <div class="timeline-content">
+                            <strong>Median: 172–175 mg/dL</strong> | Range: 140–220 mg/dL<br>
+                            Highest time-of-day median. Your 1.6 U/hr basal (11 AM–4 PM) is your peak basal rate. Lunch bolus may also be lagging.
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-time">6 PM – 9 PM (EVENING/DINNER)</div>
+                        <div class="timeline-content">
+                            <strong>Median: 152–158 mg/dL</strong> | Range: 120–198 mg/dL<br>
+                            Trending down after afternoon peak. Post-dinner corrections likely occur here, setting up nocturnal lows.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GOALS & PROGRESS TAB -->
+        <div id="goals" class="tab-content">
+            <div class="card">
+                <h3>🎯 3-Month Goals (Now → February 2026)</h3>
+
+                <h4>Primary Goals</h4>
+
+                <div class="pattern-box">
+                    <strong>Goal 1: A1C ≤ 6.5%</strong>
+                    <div style="margin-top: var(--space-8);">
+                        <strong>Current:</strong> 7.2% | <strong>Target:</strong> 6.5% or lower
+                    </div>
+                    <div class="progress-bar" style="margin-top: var(--space-12);">
+                        <div class="progress-fill warning" style="width: 72%;"></div>
+                    </div>
+                    <p><strong>Strategy:</strong> Improve TIR by fixing post-breakfast highs and nocturnal lows. A1C will drop as TIR rises.</p>
+                </div>
+
+                <div class="pattern-box">
+                    <strong>Goal 2: Time-in-Range > 85%</strong>
+                    <div style="margin-top: var(--space-8);">
+                        <strong>Current:</strong> 66% | <strong>Target:</strong> >85%
+                    </div>
+                    <div class="progress-bar" style="margin-top: var(--space-12);">
+                        <div class="progress-fill warning" style="width: 66%;"></div>
+                    </div>
+                    <p><strong>Strategy:</strong> Reduce time above 180 from 33% → <15% by bolus timing, carb accuracy, and evening basal adjustments.</p>
+                </div>
+
+                <div class="pattern-box">
+                    <strong>Goal 3: Weight Loss 4–6 lbs</strong>
+                    <div style="margin-top: var(--space-8);">
+                        <strong>Current:</strong> 201 lbs | <strong>Target:</strong> 196–197 lbs
+                    </div>
+                    <div class="progress-bar" style="margin-top: var(--space-12);">
+                        <div class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <p><strong>Strategy:</strong> 0.5–1 lb/week loss via 1,200–1,300 kcal/day, fiber-rich meals, and increased activity. Expect TDI to drop ~5–10% with weight loss.</p>
+                </div>
+
+                <div class="pattern-box">
+                    <strong>Goal 4: Daily Steps 10,000</strong>
+                    <div style="margin-top: var(--space-8);">
+                        <strong>Current:</strong> 4,652 steps/day | <strong>Target:</strong> 10,000 steps/day
+                    </div>
+                    <div class="progress-bar" style="margin-top: var(--space-12);">
+                        <div class="progress-fill" style="width: 46.5%;"></div>
+                    </div>
+                    <p><strong>Strategy:</strong> Add 1,000 steps/week on non-activity days. Walks after meals (esp. breakfast & dinner) smooth post-meal BGs and prevent nocturnal lows.</p>
+                </div>
+
+                <div class="pattern-box">
+                    <strong>Goal 5: Sleep Quality (7–8 hrs consolidated)</strong>
+                    <div style="margin-top: var(--space-8);">
+                        <strong>Current:</strong> 8–9 hrs (fragmented, waking at 2 AM & 5 AM) | <strong>Target:</strong> 7–8 hrs unbroken
+                    </div>
+                    <div class="progress-bar" style="margin-top: var(--space-12);">
+                        <div class="progress-fill warning" style="width: 50%;"></div>
+                    </div>
+                    <p><strong>Strategy:</strong> Fix nocturnal lows first (they cause 2 AM waking). Then implement sleep hygiene: bed by 10:30 PM, no screens after 9:45 PM, cool dark room.</p>
+                </div>
+
+                <h4 style="margin-top: var(--space-24);">Milestone Targets</h4>
+                <div class="week-summary">
+                    <div class="day-box">
+                        <div class="day-label">End Week 4</div>
+                        <div class="day-value">70%</div>
+                        <div class="day-status">TIR Target</div>
+                    </div>
+                    <div class="day-box">
+                        <div class="day-label">End Week 8</div>
+                        <div class="day-value">75%</div>
+                        <div class="day-status">TIR Target</div>
+                    </div>
+                    <div class="day-box">
+                        <div class="day-label">End Week 12</div>
+                        <div class="day-value">85%+</div>
+                        <div class="day-status">TIR Goal</div>
+                    </div>
+                    <div class="day-box">
+                        <div class="day-label">Feb 2026</div>
+                        <div class="day-value">6.5%</div>
+                        <div class="day-status">A1C Target</div>
+                    </div>
+                </div>
+
+                <div class="alert-box info">
+                    <h4>📌 What to Track Weekly</h4>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li>Average daily TIR %</li>
+                        <li>Weight (same time, same conditions)</li>
+                        <li>Daily average steps</li>
+                        <li>Sleep duration & quality (from Garmin)</li>
+                        <li># of lows per week</li>
+                        <li># of BG >250 per week</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENDO PREP TAB -->
+        <div id="endo-prep" class="tab-content">
+            <div class="card">
+                <h3>📄 Prepare for Your February Endo Visit</h3>
+
+                <div class="alert-box info">
+                    <h4>Next Visit</h4>
+                    <p><strong>Date:</strong> February 2026 | <strong>Bring:</strong> This summary + Dexcom/Glooko exports + detailed traces</p>
+                </div>
+
+                <h4 style="margin-top: var(--space-24);">Current Summary (as of Dec 6, 2025)</h4>
+
+                <div class="pattern-box">
+                    <strong>Glucose Control</strong>
+                    <ul style="margin: var(--space-8) 0; padding-left: 20px;">
+                        <li>A1C (GMI): 7.2% (target: ≤6.5%)</li>
+                        <li>Time in Range (70–180): 66% (target: >85%)</li>
+                        <li>Time Above Range (>180): 33% (need to reduce)</li>
+                        <li>Time Below Range (<70): 1% (acceptable, but lows are concerning)</li>
+                        <li>Average Glucose: 164 mg/dL (target: <150)</li>
+                        <li>Glucose Variability (CV): 35.4% (high—indicates instability)</li>
+                    </ul>
+                </div>
+
+                <div class="pattern-box">
+                    <strong>Insulin Profile</strong>
+                    <ul style="margin: var(--space-8) 0; padding-left: 20px;">
+                        <li>Total Daily Insulin: 75 U/day (0.75 U/kg—higher than initially estimated)</li>
+                        <li>Basal: 35.8 U/day (48%)</li>
+                        <li>Bolus: 39.1 U/day (52%)</li>
+                        <li>ICR: 1 U : 6 g carbs</li>
+                        <li>ISF (Correction Factor): 1 U : 25 mg/dL</li>
+                        <li>Basal Profile: 1.0 (12am–7am), 1.4 (7–11am), 1.6 (11am–4pm), 1.4 (4–9pm), 1.1 (9pm–12am)</li>
+                    </ul>
+                </div>
+
+                <div class="pattern-box">
+                    <strong>Key Patterns (Identified from Recent Data)</strong>
+                    <ul style="margin: var(--space-8) 0; padding-left: 20px;">
+                        <li><strong>Post-Breakfast Highs (9 AM):</strong> Median spike to 168 mg/dL (range 130–215). Likely causes: (a) Coffee + milk = ~12g carbs not bolused, (b) Breakfast carbs underestimated, (c) Pre-bolus timing too short or zero.</li>
+                        <li><strong>Nocturnal Lows (12:30 AM & 3 AM):</strong> Median 138–145 mg/dL, 10th percentile drops to 98–115. Likely causes: (a) Evening corrections stacking (manual + automatic), (b) 9 PM–12 AM basal (1.1 U/hr) too aggressive, (c) Aggressive ISF (25) in evening.</li>
+                        <li><strong>High Glucose Variability (CV 35.4%):</strong> Indicates erratic control; suggests need for more consistent meal timing, bolus strategies, or settings adjustments.</li>
+                    </ul>
+                </div>
+
+                <h4 style="margin-top: var(--space-24);">Questions to Ask Your Endo</h4>
+                <div class="action-list" style="border: 1px solid var(--color-border); border-radius: var(--radius-base); padding: var(--space-16); background: var(--color-surface);">
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        <strong>1. Post-Breakfast Highs:</strong> "My BGs spike to 150–200 mg/dL after breakfast (9 AM). Looking at these traces, is this a pre-bolus timing issue, carb-counting issue, or should my breakfast ICR/ISF be adjusted? I just learned my coffee + milk is ~12g carbs—should I bolus for this separately?"
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        <strong>2. Nocturnal Lows:</strong> "I'm experiencing lows around 12:30 AM and 3 AM, often 2–3 hours after evening corrections. I suspect either manual + automatic corrections are stacking, or my 9 PM–12 AM basal is too high. Can we troubleshoot this? Should I reduce the 1.1 U/hr basal in that window?"
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        <strong>3. Insulin Resistance & Weight Loss:</strong> "My actual TDI is 75 U/day (0.75 U/kg), which is higher than expected. My Hashimoto's is on levothyroxine. As I lose weight (0.5–1 lb/week target over 12 weeks), should we preemptively reduce TDI or wait for patterns? Any interactions with my thyroid meds?"
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        <strong>4. Activity Mode:</strong> "I want to reach 10,000 steps/day (currently 4,652). Should I enable Activity mode on Omnipod 5 for all walks, or only longer/intense sessions? Any pre-walk snack recommendations?"
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        <strong>5. Carb Counting:</strong> "My Glooko data shows I'm eating ~182g carbs/day, but I've been logging ~120g. Should I do formal carb-counting training or weigh food for 1–2 weeks to calibrate?"
+                    </li>
+                    <li style="padding: var(--space-8) 0;">
+                        <strong>6. Omnipod 5 Settings:</strong> "Should I adjust my ISF, ICR, or target range based on the patterns you're seeing? Any settings tweaks you'd recommend before we revisit in a month?"
+                    </li>
+                </div>
+
+                <h4 style="margin-top: var(--space-24);">Data to Bring</h4>
+                <div class="action-list" style="border: 1px solid var(--color-border); border-radius: var(--radius-base); padding: var(--space-16); background: var(--color-surface);">
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        ✅ Last 30 days Dexcom/Glooko export (TIR, TBR, TAR, GMI, CV)
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        ✅ 5–7 detailed breakfast traces (screenshot or print): pre-meal, meal time, 2h post-meal
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        ✅ 5–7 detailed evening/overnight traces: dinner → bedtime → morning
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        ✅ Weekly weight trend (charted)
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        ✅ Nutrition log (sample typical day: meals, carbs, protein, fat)
+                    </li>
+                    <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-8) 0;">
+                        ✅ Activity & sleep summary (avg steps/day, sleep hours/quality)
+                    </li>
+                    <li style="padding: var(--space-8) 0;">
+                        ✅ A copy of this dashboard (print or bring on phone)
+                    </li>
+                </div>
+
+                <h4 style="margin-top: var(--space-24);">What to Expect</h4>
+                <div class="alert-box">
+                    <p>Your endo will likely discuss: (1) adjustments to basal rates or bolus ratios based on your patterns, (2) strategies to reduce evening corrections and prevent stacking, (3) reinforcement of carb-counting accuracy, (4) weight-loss plan and insulin adjustment expectations, (5) Omnipod 5 settings optimization.</p>
+                </div>
+
+                <div style="margin-top: var(--space-24); padding: var(--space-24); background: var(--color-bg); border-radius: var(--radius-base); border-left: 4px solid var(--color-primary);">
+                    <h4 style="margin-top: 0;">📋 RAYA's Endo Summary (Ready to Print)</h4>
+                    <p><strong>Patient:</strong> 32-year-old male, T1D on Omnipod 5 + Dexcom G7 | <strong>Date:</strong> December 6, 2025</p>
+                    <p><strong>Current Status:</strong> A1C 7.2%, TIR 66%, TDI 75 U/day (0.75 U/kg), Average BG 164 mg/dL, CV 35.4%</p>
+                    <p><strong>Goals (3 months):</strong> A1C ≤6.5%, TIR >85%, weight loss 4–6 lbs, 10k steps/day, better sleep</p>
+                    <p><strong>Main Issues:</strong> (1) Post-breakfast highs at 9 AM (spikes to 150–200+), (2) Nocturnal lows at 12:30–3 AM, (3) High glucose variability (CV 35.4%), (4) Actual carb intake (182g) higher than perceived (120g)</p>
+                    <p><strong>Working Hypotheses:</strong> Post-breakfast highs from uncounted coffee milk carbs (12g) + pre-bolus timing issues. Nocturnal lows from stacked evening corrections + possibly aggressive 9 PM–12 AM basal.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Service Worker Registration for Offline Support
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('✅ Service Worker registered');
+            }).catch(err => {
+                console.log('⚠️ Service Worker registration failed:', err);
+            });
+        }
+
+        // Online/Offline Status
+        function updateSyncStatus() {
+            const status = document.getElementById('syncStatus');
+            if (navigator.onLine) {
+                status.textContent = '✅ Online - All data synced';
+                status.classList.remove('offline');
+            } else {
+                status.textContent = '📴 Offline - Working locally';
+                status.classList.add('offline');
+            }
+            status.classList.add('show');
+            setTimeout(() => status.classList.remove('show'), 3000);
+        }
+
+        window.addEventListener('online', updateSyncStatus);
+        window.addEventListener('offline', updateSyncStatus);
+
+        // Initialize with current date/time
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        document.getElementById('entryTime').value = now.toISOString().slice(0, 16);
+
+        // Tab switching
+        function switchTab(tabName) {
+            const contents = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-button');
+            
+            contents.forEach(content => content.classList.remove('active'));
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Update visible fields based on entry type
+        function updateEntryFields() {
+            const type = document.getElementById('entryType').value;
+            document.getElementById('mealFields').style.display = type.includes('meal') || type.includes('snack') ? 'block' : 'none';
+            document.getElementById('bgCheckFields').style.display = type === 'bg-check' ? 'block' : 'none';
+            document.getElementById('activityFields').style.display = type === 'activity' ? 'block' : 'none';
+            document.getElementById('lowFields').style.display = type === 'low' ? 'block' : 'none';
+            document.getElementById('sleepFields').style.display = type === 'sleep' ? 'block' : 'none';
+        }
+
+        // Handle form submission with localStorage
+        let entries = [];
+        loadEntriesFromStorage();
+
+        document.getElementById('entryForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const type = document.getElementById('entryType').value;
+            const time = document.getElementById('entryTime').value;
+            
+            let entry = {
+                id: Date.now(),
+                type: type,
+                time: time,
+                timestamp: new Date(time).getTime()
+            };
+
+            if (type.includes('meal') || type.includes('snack')) {
+                entry.carbs = document.getElementById('carbs').value;
+                entry.protein = document.getElementById('protein').value;
+                entry.fat = document.getElementById('fat').value;
+                entry.bolus = document.getElementById('bolus').value;
+                entry.description = document.getElementById('mealDesc').value;
+            } else if (type === 'bg-check') {
+                entry.bg = document.getElementById('bgValue').value;
+                entry.trend = document.getElementById('trend').value;
+                entry.context = document.getElementById('bgContext').value;
+            } else if (type === 'activity') {
+                entry.actType = document.getElementById('actType').value;
+                entry.duration = document.getElementById('actDuration').value;
+                entry.notes = document.getElementById('actNotes').value;
+            } else if (type === 'low') {
+                entry.bg = document.getElementById('lowBG').value;
+                entry.treatment = document.getElementById('lowTreat').value;
+                entry.what = document.getElementById('lowWhat').value;
+            } else if (type === 'sleep') {
+                entry.hours = document.getElementById('sleepHours').value;
+                entry.quality = document.getElementById('sleepQuality').value;
+                entry.notes = document.getElementById('sleepNotes').value;
+            }
+
+            entries.push(entry);
+            saveEntriesToStorage();
+            renderEntries();
+            this.reset();
+            document.getElementById('entryTime').value = now.toISOString().slice(0, 16);
+            updateEntryFields();
+            alert('✅ Entry logged successfully and saved locally!');
+        });
+
+        function renderEntries() {
+            const list = document.getElementById('entriesList');
+            if (entries.length === 0) {
+                list.innerHTML = '<p style="color: var(--color-text-secondary);">No entries yet today.</p>';
+                return;
+            }
+
+            const sorted = [...entries].sort((a, b) => b.timestamp - a.timestamp);
+
+            list.innerHTML = sorted.map((entry, idx) => {
+                let content = '';
+                const time = new Date(entry.time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                if (entry.type.includes('meal')) {
+                    content = `<strong>${entry.carbs}g carbs</strong> | ${entry.protein}g protein | ${entry.fat}g fat | <strong>${entry.bolus}U bolus</strong><br><small>${entry.description}</small>`;
+                } else if (entry.type === 'bg-check') {
+                    content = `<strong>${entry.bg} mg/dL</strong> ${entry.trend ? `(${entry.trend})` : ''}<br><small>${entry.context}</small>`;
+                } else if (entry.type === 'activity') {
+                    content = `<strong>${entry.duration} min</strong> ${entry.actType}<br><small>${entry.notes}</small>`;
+                } else if (entry.type === 'low') {
+                    content = `<strong>Low: ${entry.bg} mg/dL</strong> → Treated with <strong>${entry.treatment}g carbs</strong> (${entry.what})`;
+                } else if (entry.type === 'sleep') {
+                    content = `<strong>${entry.hours} hrs sleep</strong> | Quality: ${entry.quality}/10<br><small>${entry.notes}</small>`;
+                }
+
+                return `
+                    <div style="background: var(--color-bg); border-radius: var(--radius-base); padding: var(--space-12); margin-bottom: var(--space-8); display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-size: 12px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase;">${time} • ${entry.type}</div>
+                            <div style="margin-top: var(--space-8);">${content}</div>
+                        </div>
+                        <button onclick="deleteEntry(${entry.id})" style="background: var(--color-error); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">Delete</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function saveEntriesToStorage() {
+            localStorage.setItem('rayaEntries', JSON.stringify(entries));
+        }
+
+        function loadEntriesFromStorage() {
+            const stored = localStorage.getItem('rayaEntries');
+            entries = stored ? JSON.parse(stored) : [];
+            renderEntries();
+        }
+
+        function deleteEntry(id) {
+            entries = entries.filter(e => e.id !== id);
+            saveEntriesToStorage();
+            renderEntries();
+        }
+
+        // Initialize
+        updateEntryFields();
+    </script>
+</body>
+</html>
